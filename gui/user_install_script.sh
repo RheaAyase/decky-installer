@@ -161,13 +161,15 @@ systemctl disable plugin_loader 2> /dev/null
 
 echo "85" ; echo "# Setting up systemd" ;
 curl -L https://raw.githubusercontent.com/SteamDeckHomebrew/decky-loader/main/dist/plugin_loader-${BRANCH}.service  --output ${HOMEBREW_FOLDER}/services/plugin_loader-${BRANCH}.service
+sed -i "s/User=root/User=${SUDO_USER}/g" ${HOMEBREW_FOLDER}/services/plugin_loader-${BRANCH}.service
+
 cat > "${HOMEBREW_FOLDER}/services/plugin_loader-backup.service" <<- EOM
 [Unit]
 Description=SteamDeck Plugin Loader
 After=network.target
 [Service]
 Type=simple
-User=root
+User=${SUDO_USER}
 Restart=always
 ExecStart=${HOMEBREW_FOLDER}/services/PluginLoader
 WorkingDirectory=${HOMEBREW_FOLDER}/services
@@ -194,16 +196,14 @@ cp ${HOMEBREW_FOLDER}/services/plugin_loader-${BRANCH}.service ${HOMEBREW_FOLDER
 cp ${HOMEBREW_FOLDER}/services/plugin_loader-backup.service ${HOMEBREW_FOLDER}/services/.systemd/plugin_loader-backup.service
 rm ${HOMEBREW_FOLDER}/services/plugin_loader-backup.service ${HOMEBREW_FOLDER}/services/plugin_loader-${BRANCH}.service
 
-systemctl daemon-reload
-systemctl start plugin_loader
-systemctl enable plugin_loader
-
 # this (retroactively) fixes a bug where users who ran the installer would have homebrew owned by root instead of their user
 # will likely be removed at some point in the future
-if [ "$SUDO_USER" =  "deck" ]; then
-  sudo chown -R deck:deck "${HOMEBREW_FOLDER}"
-  sudo chown -R root:root "${HOMEBREW_FOLDER}"/services/*
-fi
+sudo chown -R ${SUDO_USER}:${SUDO_USER} "${HOMEBREW_FOLDER}"
+sudo chown -R root:root "${HOMEBREW_FOLDER}"/services/*
+
+sudo systemctl daemon-reload
+sudo systemctl start plugin_loader
+sudo systemctl enable plugin_loader
 
 echo "100" ; echo "# Install finished, installer can now be closed";
 ) |
